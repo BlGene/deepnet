@@ -337,7 +337,7 @@ class NeuralNet(object):
     losses.extend([node.GetLoss() for node in self.output_datalayer])
     return losses
 
-  def Evaluate(self, validation=True, collect_predictions=False):
+  def Evaluate(self, validation=True, collect_predictions=False,analysis=None):
     """Evaluate the model.
     Args:
       validation: If True, evaluate on the validation set,
@@ -364,6 +364,7 @@ class NeuralNet(object):
       prefix = 'E'
       stats_list = self.net.test_stats
       num_batches = self.test_data_handler.num_batches
+    
     if collect_predictions:
       output_layer = self.output_datalayer[0]
       collect_pos = 0
@@ -371,6 +372,7 @@ class NeuralNet(object):
       numdims = output_layer.state.shape[0]
       predictions = np.zeros((batchsize * num_batches, numdims))
       targets = np.zeros(predictions.shape)
+
     while not stop:
       datagetter()
       losses = self.EvaluateOneBatch()
@@ -386,21 +388,32 @@ class NeuralNet(object):
           Accumulate(acc, loss)
       else:
         stats = losses
+      
       step += 1
       stop = stopcondition(step)
-    if collect_predictions and stats:
+    
+    
+    if collect_predictions:
       predictions = predictions[:collect_pos]
       targets = targets[:collect_pos]
-      MAP, prec50, MAP_list, prec50_list = self.ComputeScore(predictions, targets)
-      stat = stats[0]
-      stat.MAP = MAP
-      stat.prec50 = prec50
-      for m in MAP_list:
-        stat.MAP_list.extend([m])
-      for m in prec50_list:
-        stat.prec50_list.extend([m])
+        
+      #Do extra analysis
+      if analysis:
+        analysis(predictions,targets)
+
+      if stats:
+        MAP,prec50,MAP_list,prec50_list = self.ComputeScore(predictions, targets)
+        stat = stats[0]
+        stat.MAP = MAP
+        stat.prec50 = prec50
+        for m in MAP_list:
+          stat.MAP_list.extend([m])
+        for m in prec50_list:
+          stat.prec50_list.extend([m])
+    
     for stat in stats:
       sys.stdout.write(GetPerformanceStats(stat, prefix=prefix))
+    
     stats_list.extend(stats)
 
 

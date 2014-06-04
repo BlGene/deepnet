@@ -1,5 +1,5 @@
 stopcondition {
   all_processed: true
 }
-data_proto: "/ais/gobi3/u/nitish/mnist/mnist.pbtxt" 
+data_proto: "~/data/mnist/mnist.pbtxt" 
 batchsize: 100

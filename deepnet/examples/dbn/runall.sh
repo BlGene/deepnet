@@ -1,6 +1,6 @@
 #!/bin/bash
 # Trains DBN on MNIST.
-train_deepnet='python ../../trainer.py'
+train_deepnet='python2 ../../trainer.py'
 echo "RBM 1"
 ${train_deepnet} mnist_rbm1.pbtxt train.pbtxt eval.pbtxt || exit 1
 echo "RBM 2"
