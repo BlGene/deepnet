@@ -35,7 +35,9 @@ class ShowNet:
         
         #Now get the model
         self.model = CreateDeepnet(model,train_op,eval_op)
-        
+
+        self.only_errors = False
+
     def plot_cost(self):
         #code taken from make_plots.py        
 
@@ -112,35 +114,47 @@ class ShowNet:
         #to analyse the results
         res = np.argmax(predictions,axis=1) == targets
         
-        correct_count = np.sum(res)
+        if( self.only_errors):
+            #position of wrong test samples
+            query_pos = list(np.argwhere(res ==False).flatten())
         
-        #position of wrong test samples
-        wrong_pos = list(np.argwhere(res ==False).flatten())
+        elif( self.only_close):
+            max_val = np.max(predictions,axis=1)
+            sec_idx = np.argsort(-predictions,axis=1)[:,1]
+             
+            sec_val = predictions[np.arange(predictions.shape[0]),sec_idx]
+            dist = max_val - sec_val
+            
+            query_pos = list(np.argsort(dist)[0:NUM_IMGS])
+            query_pos.sort()
+             
+            set_trace()
         
+        else:
+            np.random.seed()
+            query_pos = list(np.random.randint(res.shape[0],size=NUM_IMGS))
+            query_pos.sort()
+           
         #the (wrong) predictions that were made
-        preds = predictions[wrong_pos]
-        true_label = targets[wrong_pos]
+        preds = predictions[query_pos]
+        true_label = targets[query_pos]
 
         
         #Iterate through the data handler to get all the wrong predictions
         offset = 0
         batchsize = self.model.test_data_handler.batchsize
         data  = []
-        while len(wrong_pos) > 0:
+        while len(query_pos) > 0:
             #print(offset)
             data_list = self.model.test_data_handler.Get()
             
-            while wrong_pos[0] < offset + batchsize:
-                data.append( data_list[0].asarray()[:,wrong_pos[0]-offset] )
-                wrong_pos = wrong_pos[1:]
-                if(len(wrong_pos)==0):
+            while query_pos[0] < offset + batchsize:
+                data.append( data_list[0].asarray()[:,query_pos[0]-offset] )
+                query_pos = query_pos[1:]
+                if(len(query_pos)==0):
                     break
                 
             offset += batchsize
-        
-
-        #hackety hack
-        self.only_errors = True
         
         fig = pl.figure(3)
         fig.text(.4, .95, '%s test case predictions' % ('Mistaken' if self.only_errors else 'Random'))
@@ -177,7 +191,6 @@ class ShowNet:
                 pl.ylim(0, ylocs[-1] + height*2)
 
 
-
         set_trace()
         print(len(self.model.net.test_stats))
 
@@ -185,6 +198,14 @@ class ShowNet:
     def start(self):
        if self.op.show_cost:
             self.plot_cost()
+        
+       if self.op.only_errors:
+           assert(self.op.show_preds)
+           self.only_errors = True
+
+       if self.op.only_close:
+           assert(self.op.show_preds)
+           self.only_close = True
 
        if self.op.show_preds:
            self.plot_predictions()
@@ -206,8 +227,12 @@ class ShowNet:
         
         op.add_argument("--show-preds",action='store_true',
                         help="Show predictions made on test set")
-        
 
+        op.add_argument("--only-errors",action='store_true',
+                        help="Show only mistaken predictions")
+
+        op.add_argument("--only-close",action='store_true',
+                        help="Show only close predictions")
 
         return op
 
